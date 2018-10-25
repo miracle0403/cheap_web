@@ -122,8 +122,6 @@ app.use('/users', usersRouter);
 	});
 }*/
 passport.use(new localStrategy(function(username, password, done){
-    console.log(username);
-    console.log(password);
     const db = require('./db.js');
     
     db.query('SELECT user_id, password FROM user WHERE username = ?', [username], function (err, results, fields){

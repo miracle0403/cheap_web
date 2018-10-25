@@ -51,8 +51,12 @@ router.get('/howitworks',  function (req, res, next){
 
 //console.log( req.route.path )
   res.render('howitworks', {title: "HOW IT WORKS"});
+});
+ 
+// order
+router.get('/order', authentificationMiddleware(), function (req, res, next){ 
+  res.render('order', {title: "ORDER PRODUCTS"});
 }); 
-
 router.get('/faq',  function (req, res, next){
   res.render('faq', {title: "FAQ"});
 }); 
@@ -383,6 +387,122 @@ router.get('/logout', function(req, res, next) {
 router.get('/dashboard', authentificationMiddleware(), function(req, res, next) {
 	var currentUser = req.session.passport.user.user_id;
 	//get news important.
+	db.query( 'SELECT subject FROM news', function ( err, results, fields ){
+		if ( err ) throw err; 
+		//get the last one
+		var last = results.slice( -1 )[0];
+		var news = last.subject;
+		//check the admin and non admin
+		db.query( 'SELECT user FROM admin WHERE user = ?', [currentUser], function ( err, results, fields ){
+			if( err ) throw err;
+			if( results.length === 0 ){
+				db.query( 'SELECT username FROM user WHERE user_id = ?', [currentUser], function ( err, results, fields ){
+					if( err ) throw err;
+					var username = results[0].username;
+					//check if the user has updated his profile
+					db.query( 'SELECT user FROM profile WHERE user = ?', [username], function ( err, results, fields ){
+						if( err ) throw err;
+						if( results.length === 0 ){
+							var error = 'Please update your profile to see your stats.';
+							res.render( 'dashboard', {title: 'DASHBOARD', error: error, news: news});
+						}else{
+							//check if the person has earned
+							db.query( 'SELECT user FROM earnings WHERE user = ?', [username], function ( err, results, fields ){
+								if( err ) throw err;
+								if( results.length === 0 ){
+									var error = 'You have not earned in our affliate program... refer people to us to earn.';
+									// check the status of his work or if he has a job request.
+									db.query( 'SELECT * FROM jobs WHERE client = ? and (status = ? or status = ? or status = ? or status = ?) ', [username, 'Request', 'Approved', 'In Progress', 'Finished'], function ( err, results, fields ){
+											if( err ) throw err;
+											if( results.length === 0 ){
+												var error = 'You have no active project with us... feel free to order a product.';
+												res.render( 'dashboard', {title: 'DASHBOARD', error: error, news: news, balance: balance, totalearn: credit, totalWithdraw: debit});
+											}else{
+												var jobs = results;
+												res.render( 'dashboard', {title: 'DASHBOARD', error: error, news: news, balance: balance, totalearn: credit, totalWithdraw: debit, jobs: jobs});
+											}
+										});
+								}else{
+									//get the sum of his  total earnings.
+									db.query( 'SELECT SUM(credit) AS credit, SUM(debit) AS debit FROM earnings WHERE user = ?', [username], function ( err, results, fields ){
+										if( err ) throw err;
+										var credit = results[0].credit;
+										var debit = results[0].debit;
+										var balance = credit - debit;
+										
+										// check if he has a job request
+										db.query( 'SELECT * FROM jobs WHERE client = ? and (status = ? or status = ? or status = ? or status = ?) ', [username, 'Request', 'Approved', 'In Progress', 'Finished'], function ( err, results, fields ){
+											if( err ) throw err;
+											if( results.length === 0 ){
+												var error = 'You have no active project with us... feel free to order a product.';
+												res.render( 'dashboard', {title: 'DASHBOARD', error: error, news: news, balance: balance, totalearn: credit, totalWithdraw: debit});
+											}else{
+												var jobs = results;
+												res.render( 'dashboard', {title: 'DASHBOARD', error: error, news: news, balance: balance, totalearn: credit, totalWithdraw: debit, jobs: jobs});
+											}
+										});
+									});
+								}
+							});
+						}
+					});
+				});
+			}else{
+				var admin = 'is an admin';
+				db.query( 'SELECT username FROM user WHERE user_id = ?', [currentUser], function ( err, results, fields ){
+					if( err ) throw err;
+					var username = results[0].username;
+					//check if the user has updated his profile
+					db.query( 'SELECT user FROM profile WHERE user = ?', [username], function ( err, results, fields ){
+						if( err ) throw err;
+						if( results.length === 0 ){
+							var error = 'Please update your profile to see your stats.';
+							res.render( 'dashboard', {title: 'DASHBOARD', admin:admin, error: error, news: news});
+						}else{
+							//check if the person has earned
+							db.query( 'SELECT user FROM earnings WHERE user = ?', [username], function ( err, results, fields ){
+								if( err ) throw err;
+								if( results.length === 0 ){
+									var error = 'You have not earned in our affliate program... refer people to us to earn.';
+									// check the status of his work or if he has a job request.
+									db.query( 'SELECT * FROM jobs WHERE client = ? and (status = ? or status = ? or status = ? or status = ?) ', [username, 'Request', 'Approved', 'In Progress', 'Finished'], function ( err, results, fields ){
+											if( err ) throw err;
+											if( results.length === 0 ){
+												var error = 'You have no active project with us... feel free to order a product.';
+												res.render( 'dashboard', {title: 'DASHBOARD', admin:admin, error: error, news: news, balance: balance, totalearn: credit, totalWithdraw: debit});
+											}else{
+												var jobs = results;
+												res.render( 'dashboard', {title: 'DASHBOARD', admin:admin, error: error, news: news, balance: balance, totalearn: credit, totalWithdraw: debit, jobs: jobs});
+											}
+										});
+								}else{
+									//get the sum of his  total earnings.
+									db.query( 'SELECT SUM(credit) AS credit, SUM(debit) AS debit FROM earnings WHERE user = ?', [username], function ( err, results, fields ){
+										if( err ) throw err;
+										var credit = results[0].credit;
+										var debit = results[0].debit;
+										var balance = credit - debit;
+										
+										// check if he has a job request
+										db.query( 'SELECT * FROM jobs WHERE client = ? and (status = ? or status = ? or status = ? or status = ?) ', [username, 'Request', 'Approved', 'In Progress', 'Finished'], function ( err, results, fields ){
+											if( err ) throw err;
+											if( results.length === 0 ){
+												var error = 'You have no active project with us... feel free to order a product.';
+												res.render( 'dashboard', {title: 'DASHBOARD', admin: admin, error: error, news: news, balance: balance, totalearn: credit, totalWithdraw: debit});
+											}else{
+												var jobs = results;
+												res.render( 'dashboard', {title: 'DASHBOARD', admin:admin, error: error, news: news, balance: balance, totalearn: credit, totalWithdraw: debit, jobs: jobs});
+											}
+										});
+									});
+								}
+							});
+						}
+					});
+				});
+			}
+		});
+	});
 	res.render( 'dashboard', {title: 'DASHBOARD'});
 });
 router.post('/sendmail',  function (req, res, next){
@@ -723,12 +843,12 @@ router.post('/search', authentificationMiddleware(), function  (req, res, next) 
 				if ( err ) throw err;
 				if( results.length === 0 ){
 					var error  = 'This user has not earned yet.';
-					res.render( 'status', {error: error});
+					res.render( 'status', {error: error}); 
 				}else{
 					var user = results;
 					res.render( 'test', {user: user});
 				}
-			});
+			}); 
 		}
 	});
 });
@@ -776,9 +896,9 @@ router.post('/search', authentificationMiddleware(), function  (req, res, next) 
 
 //post log in
 router.post('/login', passport.authenticate('local', {
-  failureRedirect: '/login',
-  successRedirect: '/dashboard',
-  failureFlash: true
+		failureRedirect: '/login',
+		successRedirect: '/dashboard',
+		failureFlash: true
 }));
 
 //post profile
